@@ -2,7 +2,7 @@
 name: contact-search
 user-invocable: false
 description: "Find people at a buyer institution — staff, executives, board members, department heads — from Starbridge's verified contact database, with an optional public-web fallback."
-when_to_use: "Use for any 'who' or 'find contacts' question, and as the required step before drafting outbound email. Example triggers — 'who is the CIO at X', 'find me contacts at this district', 'who runs IT / procurement / the board', 'get the superintendent', 'who should I reach out to'. Run buyer-identification first if the buyer id is unknown."
+when_to_use: "Use for any 'who' or 'find contacts' question — whether the user names a role or a specific person — and as the required step before drafting outbound email. Example triggers — 'who is the CIO at X', 'find me contacts at this district', 'who runs IT / procurement / the board', 'get the superintendent', 'who should I reach out to', 'does Jason Klein work here', 'find Jane Doe at this district', 'what is Dr. Patel's email'. Run buyer-identification first if the buyer id is unknown."
 ---
 
 # Contact Search
@@ -19,7 +19,11 @@ Finds contacts (people) associated with a buyer institution. Searches Starbridge
 ## Tools
 
 ### `searchBuyerContacts`
-Searches the Starbridge-verified contact database. Returns contacts with verified information including name, title, department, email, and phone. Filter by canonical job titles via `include` (one or more) and optionally `exclude`. Pass titles as distinct canonical roles — not synonyms or abbreviations of the same role. `include` must contain at least one title — the tool rejects an empty `include`; if the user hasn't named a role, infer likely decision-maker titles (e.g. Superintendent, Chief Information Officer) or ask which roles they want before searching. When the `contacts` list comes back empty, the response also carries role-aware next-step suggestions — surface those rather than silently reporting nothing.
+Searches the Starbridge-verified contact database. Returns contacts with verified information including name, title, department, email, and phone. Search one of two ways:
+- **By person name** — pass `name` (e.g. `Jason Klein`) when the user names a specific individual rather than a role. You don't need their title first. A partial name is enough: a first name alone, a surname alone, or both, and unknown middle names don't matter. Pass the name as the user gave it — don't expand or guess at a fuller version. Closest matches come back first; when several people share the name, disambiguate with the user rather than assuming the first is the one they meant.
+- **By job title** — pass one or more canonical job titles via `include` (and optionally `exclude`) when the user asks for a role. Pass titles as distinct canonical roles — not synonyms or abbreviations of the same role.
+
+Provide exactly one of `name` or `include` — supplying both is rejected. If the user named neither a person nor a role, infer likely decision-maker titles (e.g. Superintendent, Chief Information Officer) or ask which roles they want before searching. When the `contacts` list comes back empty, the response also carries role-aware next-step suggestions — surface those rather than silently reporting nothing.
 
 ### `unlockBuyerContact` (credit-spending — confirm first)
 Available for organizations with contact gating enabled; unlocks a locked contact's full details and **spends credits**. The `searchBuyerContacts` response marks whether each contact is unlocked and includes `unlockCreditSpendHints` (per-contact cost and remaining balance). Unlocking MUST be user-initiated: tell the user the contact is locked, state the cost and remaining balance from `unlockCreditSpendHints`, and get explicit confirmation before calling — even when unlocking is free. Pass the contact `id` from the search response.
@@ -29,7 +33,7 @@ Buyer-scoped public web search. Use only when verified contacts are unavailable 
 
 ## Workflow
 1. Ensure the buyer has been identified first via `buyer-identification`
-2. Search using `searchBuyerContacts` with at least one canonical job title in `include` (the tool requires a non-empty `include`); if no role was named, infer likely titles or ask first
+2. Search using `searchBuyerContacts`: when the user named a specific person, pass their name in `name`; when the user asked for a role, pass one or more canonical job titles in `include`. Never pass both in one call — the tool rejects that; if the user gave a name *and* a role, search by `name` and check the titles that come back. If neither was named, infer likely titles or ask first
 3. Present contacts using the **Output Format** below (a readable table)
 4. If a contact the user wants is locked, follow the `unlockBuyerContact` confirmation flow above before unlocking — never unlock without explicit user confirmation
 5. If the `contacts` list is empty, surface the response's role-aware next-step suggestions; do not silently report nothing. Only then, ask before using `runBuyerWebResearch`:
