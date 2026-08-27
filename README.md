@@ -50,6 +50,7 @@ Talk to it the way you'd brief a teammate. A few examples by what you're trying 
 **Find the right people**
 - "Who is the CIO at UCLA?"
 - "Find procurement and IT contacts at this district."
+- "Do we have a verified contact for jklein@district.org and the other emails on this list?"
 
 **Draft outreach**
 - "Draft a cold email to the superintendent about <your offering>."
