@@ -12,7 +12,7 @@
       "name": "starbridge-mcp",
       "source": "./",
       "description": "Starbridge OAuth MCP server plus GTM skills (buyer identification, attributes, summary, contact search, document research, outbound email, bridges, buyer signals, bulk-request scoping).",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "author": {
         "name": "Starbridge",
         "url": "https://starbridge.ai"
