@@ -17,7 +17,7 @@ Before drafting the email you MUST identify who it should be sent to:
 2. Address ALL key contacts that have an email address. Do not limit to a single recipient — every contact returned with a valid email should be included as a recipient.
 3. If a particular recipient was asked for by the user, use their contact details to personalize the greeting and body if that contact has an email.
 4. If contact search returns no results or no contacts have an email address, leave the recipient list empty and use a generic greeting ("Hi there" or "Hi [Title]"). Tell the user you could not find a verified contact and they should fill in the recipient manually.
-5. Only include UNLOCKED contacts as recipients — locked contacts usually have a null email and are gated behind the credit-spending `unlockBuyerContact` tool. If the contacts you need are locked and the search response includes `unlockCreditSpendHints`, do NOT auto-unlock: tell the user the contact is locked, state the per-contact cost and remaining balance, and ask them to confirm before unlocking (see `contact-search` for the unlock flow). Draft with a generic greeting meanwhile.
+5. Only include contacts with `isEnriched: true` as recipients — contacts that are not yet enriched often have a masked or null email and are gated behind the credit-spending `enrichBuyerContact` tool. If the contacts you need are not enriched, do NOT auto-enrich: tell the user, state the per-contact cost and remaining balance from `creditSpendHintsForContactActions`, and ask them to confirm first (see `contact-search` for the flow). Draft with a generic greeting meanwhile.
 
 ## Ground the Personalization
 

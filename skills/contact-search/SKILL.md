@@ -27,8 +27,12 @@ Searches the Starbridge-verified contact database. Returns contacts with verifie
 
 Provide exactly one of `name`, `include`, or `emails` — supplying more than one is rejected. If the user named neither a person, a role, nor gave emails, infer likely decision-maker titles (e.g. Superintendent, Chief Information Officer) or ask which roles they want before searching. When the `contacts` list comes back empty, the response also carries role-aware next-step suggestions — surface those rather than silently reporting nothing.
 
-### `unlockBuyerContact` (credit-spending — confirm first)
-Available for organizations with contact gating enabled; unlocks a locked contact's full details and **spends credits**. The `searchBuyerContacts` response marks whether each contact is unlocked and includes `unlockCreditSpendHints` (per-contact cost and remaining balance). Unlocking MUST be user-initiated: tell the user the contact is locked, state the cost and remaining balance from `unlockCreditSpendHints`, and get explicit confirmation before calling — even when unlocking is free. Pass the contact `id` from the search response.
+### `enrichBuyerContact` (credit-spending — confirm first)
+Enriches a contact so it can be used for actions (CRM sync, sequences) and, where the organization masks contact details, reveals the full email and phone. It **spends credits**. Each contact in the `searchBuyerContacts` response carries two flags:
+- `isEnriched` — whether the contact is already enriched for your organization. Base decisions on this flag.
+- `isUnlocked` — whether the email and phone are shown in full. Presentation only; a contact can be visible but not yet enriched.
+
+The response also includes `creditSpendHintsForContactActions` (`costPerContact`, `canSpendFreely`, remaining balance, and `actionInContext`). Enrichment MUST be user-initiated: tell the user which contacts are not yet enriched, state the cost and remaining balance, and get explicit confirmation before calling — even when it is free. Use "unlock" wording when `actionInContext` is `Unlock` and "enrich" otherwise. Pass the contact `id` from the search response.
 
 ### `runBuyerWebResearch`
 Buyer-scoped public web search. Use only when verified contacts are unavailable AND the user has approved searching public sources.
@@ -37,7 +41,7 @@ Buyer-scoped public web search. Use only when verified contacts are unavailable 
 1. Ensure the buyer has been identified first via `buyer-identification`
 2. Search using `searchBuyerContacts`: pass `emails` when the user gave you specific addresses to look up, `name` when they named an individual, or one or more canonical job titles in `include` when they're asking by role. Never combine these in one call — the tool rejects that; if the user gave a name *and* a role, search by `name` and check the titles that come back. If neither a person, a role, nor emails were given, infer likely titles or ask first
 3. Present contacts using the **Output Format** below (a readable table)
-4. If a contact the user wants is locked, follow the `unlockBuyerContact` confirmation flow above before unlocking — never unlock without explicit user confirmation
+4. If a contact the user wants has `isEnriched: false`, follow the `enrichBuyerContact` confirmation flow above — never enrich or unlock without explicit user confirmation
 5. If the `contacts` list is empty, surface the response's role-aware next-step suggestions; do not silently report nothing. Only then, ask before using `runBuyerWebResearch`:
    > "I didn't find verified contacts for this role. Would you like me to search public web sources? Note that web results may be less reliable."
 
@@ -48,7 +52,7 @@ Present contacts as a readable Markdown table so they're easy to scan — one ro
 - Use the contact's full name (include salutation and middle name when available).
 - Show `—` for any missing value rather than leaving a cell blank.
 - In the **Verified** column, mark Starbridge-verified contacts `✓ Verified` and web-sourced contacts `Unverified (web)`.
-- For a locked contact, show `🔒 locked` in the Email and Phone cells and follow the `unlockBuyerContact` confirmation flow before revealing details.
+- When a contact's details are masked (`isUnlocked: false`), show `🔒 locked` in the Email and Phone cells and follow the `enrichBuyerContact` confirmation flow before revealing details.
 - For an `emails` lookup, a contact with `isActive: false` is an expected, common result — not a data quality issue. It means Starbridge verified that person at this institution at some point but they are no longer current there. Keep them `✓ Verified` in the table and call out "no longer active at this institution" in a note rather than treating the match as stale or unreliable.
 - Lead in with a short sentence (who you found, for which roles), and add a brief follow-up after the table if useful. Don't fabricate or pad missing fields.
 
