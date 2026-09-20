@@ -7,7 +7,7 @@ when_to_use: "Use whenever the user asks about account scores, fit or signal ban
 
 # Account Scoring (Top Buyers)
 
-Three organization-wide tables, all read with the generic bridge tools. The Top Buyers bridge has one row per buyer in the organization's target market with a locked **Account Score** column (0–100) plus locked **Buyer State Name** and **Buyer Type** columns. Two market presence bridges have one row per buyer × configured competitor or complementary vendor with the vendor's contract data. Top Buyers links to the presence bridges through Link columns.
+Three organization-wide tables, all read with the generic bridge tools. The Top Buyers bridge has one row per buyer in the organization's target market with a locked **Account Score** column (0–100). Two market presence bridges have one row per buyer × configured competitor or complementary vendor with the vendor's contract data. All three carry locked **Buyer State Name** and **Buyer Type** columns, and Top Buyers links to the presence bridges through Link columns.
 
 ## Tools
 
@@ -56,20 +56,16 @@ A `null` Account Score is not zero. It means the row has not been scored yet, or
 
 Link cells on Top Buyers return at most 3 `previewRows` plus a `total`. When the count matters or `total > 3`, read the presence bridge itself:
 
-1. `getBridgeColumnMetadata(presenceBridgeId)` for the ids of **Vendor**, **Vendor Presence** (boolean "Present"), **Vendor Presence Summary**, **Estimated Annual Contract Value**, **Estimated Total Contract Value** (when present), **Estimated Contract End Date**, **Contract Term**, **Inferred**, **Inference Summary**, **Sources**, and on the competitor bridge **Products**.
-2. `listBridgeRows(presenceBridgeId)` with `Vendor Presence Equals true`, plus `Vendor Equals <name>` (or `Any [...]`) or `buyerId Any [...]` as needed. Presence rows have no Link columns, so `pageSize` 100 is fine here.
-3. Presence rows carry no geography or buyer type; join back to Top Buyers as described below. Use `getBuyerAttributesBulk` only for a handful of buyers; it is one call per buyer.
+1. `getBridgeColumnMetadata(presenceBridgeId)` for the ids of **Buyer State Name**, **Buyer Type**, **Vendor**, **Vendor Presence** (boolean "Present"), **Vendor Presence Summary**, **Estimated Annual Contract Value**, **Estimated Total Contract Value** (when present), **Estimated Contract End Date**, **Contract Term**, **Inferred**, **Inference Summary**, **Sources**, and on the competitor bridge **Products**.
+2. `listBridgeRows(presenceBridgeId)` with `Vendor Presence Equals true`, plus `Vendor` (`Equals` or `Any`), `Buyer State Name`, `Buyer Type` or `buyerId Any [...]` as the question requires. Presence rows have no Link columns, so `pageSize` 100 is fine here.
 
 Amounts are USD in cents. Contract End Date is an estimate; when `Inferred` is true say so and cite `Inference Summary`. `Sources.value.relevantOpportunities[]` lists the underlying purchase orders and contracts with `title`, `opportunityType`, `startDate` and `endDate`; use those dates for "most recent contract" questions. There is no signing date column.
 
 Only vendors configured by the organization appear in presence bridges. If a vendor is absent from both, use `searchVendorPurchaseOrders(vendorName=...)`: it returns buyers with `stateCode` and `buyerType` and dated records (`date` = purchase or contract start, `untilDate`), independent of the target market. It has no state filter and is token-bounded (`limit` ≤ 80 records; `truncated=true` drops older buyers); narrow with `productName`, `alias`, `lookbackYears`, `limit`, and disclose when results may be incomplete.
 
-## Joining presence and Top Buyers
+## Combining the bridges
 
-Presence rows know the vendor and the contract; Top Buyers rows know the buyer's state, type and score. Any question that mixes the two (a vendor in a state, partners at top accounts, contracts in a region) is a two-step read:
-
-1. Start on the side with the tighter filter — usually the presence bridge (`Vendor`, `Vendor Presence Equals true`) — and page fully, collecting `buyerId`s.
-2. Read the other side with `buyerId Any [≤ 20 ids]` plus its own terms, one page per chunk.
+The score and bands live only on Top Buyers; vendor and contract data live only on the presence bridges. When a question needs both (partners present at the top accounts, hottest buyers using a competitor), read the side with the tighter filter first, page fully collecting `buyerId`s, then read the other side with `buyerId Any [≤ 20 ids]` plus its own terms, one page per chunk.
 
 ## Interpretation rules
 
