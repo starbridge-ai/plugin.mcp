@@ -23,11 +23,11 @@ This does **not** apply to small requests (a handful of buyers) — proceed norm
    - **Narrow** — a named subset, or top-N by a stated criterion (e.g. top 10 by score or recency).
    - **Sample** — run a bounded sample now (e.g. the first 5) so the user sees the shape and cost, then decide whether to continue.
    - **Hand off** — true bulk enrichment belongs in the Starbridge app (a bridge with enrichment columns) or a Clay-style tool. Explain why, and what Starbridge MCP does well instead (targeted research, operating on existing bridge data).
-4. **Proceed only on explicit choice.** If the user opts to continue, prefer bulk-capable tools — use `getBuyerAttributesBulk` (one call) over per-buyer `getBuyerAttribute` — and batch sensibly.
+4. **Proceed only on explicit choice.** If the user opts to continue, keep the call count down — request every attribute a buyer needs in one `getBuyerAttributesBulk` call rather than one call per attribute — and batch sensibly.
 
 ## Tools (used only after scoping)
 - `listBridgeRows` — to size the job when the source is a bridge.
-- `getBuyerAttributesBulk` — the bulk path for attribute lookups across many buyers (avoid N single calls).
+- `getBuyerAttributesBulk` — many attributes for **one** buyer per call. It is not a multi-buyer batch: N buyers still cost N calls, so count them when sizing the job.
 - The actual enrichment runs through the relevant skill once scoped: `contact-search`, `buyer-summary`, or `document-research`.
 
 ## Important

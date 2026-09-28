@@ -22,10 +22,10 @@ Searches internal documents and public web sources for information about a buyer
 Searches internal documents (RFPs, board meetings, procurement data). Returns matching files with summaries and highlights. Procurement records are typically the most reliable source for vendors, technology, and contracts. This — not the web — is the authoritative first stop for buyer research.
 
 ### `viewFileContents`
-Returns token-bounded *excerpts* of one or more files — each file is truncated to roughly its first N tokens of parsed markdown, and later files are dropped if the total response budget is hit. Accepts `fileId` and/or `opportunityId` (pass an `opportunityId` to pull every file on that opportunity). Use when `researchBuyerFiles` highlights aren't enough for an exact quote or number. It is NOT the complete file — if you need the full document, use `getFileDownloadLinks`.
+Returns token-bounded *excerpts* of one or more files — each file is truncated to roughly its first N tokens of parsed markdown, and later files are dropped if the total response budget is hit. Accepts `fileId` and/or `opportunityId` (pass an `opportunityId` to pull every file on that opportunity). Use when `researchBuyerFiles` highlights aren't enough for an exact quote or number. It is NOT the complete file, and it is the most of a file you can read — if the user needs the full document, give them the link from `getFileDownloadLinks`.
 
 ### `getFileDownloadLinks`
-Returns a short-lived (≈1-hour) signed URL to the original file plus a parsed-markdown link, for when the user wants the entire document or the source file itself. The `fileId` is the per-file `id` from `researchBuyerFiles`. The response also includes `contentType` and `originalSizeBytes` (may be null for older files) so you can gauge size before fetching — do not inline multi-megabyte file bytes into your response, and note `markdownLink` can be null when the file isn't yet processed.
+Returns a short-lived (≈1-hour) signed URL to the original file plus a parsed-markdown link, for when the user wants the entire document or the source file itself. The `fileId` is the per-file `id` from `researchBuyerFiles`. Hand the URL to the user; do not fetch either link and read its contents into your context — both files can be very large and neither is size-bounded. The response also includes `contentType` and `originalSizeBytes` (may be null for older files) so you can tell the user what they're opening, and `markdownLink` can be null when the file isn't yet processed.
 
 ### `getOpportunityLineItems`
 Retrieves line items from contracts or purchase orders. Pass the `opportunityId` (not the file id).
@@ -37,18 +37,20 @@ Internal files (`researchBuyerFiles` + `viewFileContents`) are the authoritative
 1. For factual questions (vendors, technology, contracts), start with `researchBuyerFiles` — procurement records are the most reliable source
 2. Only if internal files don't answer the question — and it genuinely needs external/press coverage — call `runBuyerWebResearch`; do not run it in parallel with the first internal search. (For recency/news, prefer the `buyer-signals` feed.)
 3. Review summaries and highlights from search results
-4. Use `viewFileContents` for longer excerpts, `getFileDownloadLinks` for the full source file, or `getOpportunityLineItems` for purchase-order line items, when highlights aren't enough
+4. Use `viewFileContents` for longer excerpts, `getFileDownloadLinks` to give the user the full source file, or `getOpportunityLineItems` for purchase-order line items, when highlights aren't enough
 5. Synthesize findings into a comprehensive answer
 
 ## Starting from an opportunityId
-If you already have an `opportunityId` (e.g. from a Bridge row in the `bridges` skill, or a buyer signal) you do NOT need `researchBuyerFiles` first. Call `viewFileContents` with that `opportunityId` to pull token-bounded excerpts of all files on the opportunity (use `getFileDownloadLinks` if you need the full unbounded file), or `getOpportunityLineItems` with the `opportunityId` for its purchase-order line items.
+If you already have an `opportunityId` (e.g. from a Bridge row in the `bridges` skill, or a buyer signal) you do NOT need `researchBuyerFiles` first. Call `viewFileContents` with that `opportunityId` to pull token-bounded excerpts of all files on the opportunity (use `getFileDownloadLinks` if the user wants the full unbounded file), or `getOpportunityLineItems` with the `opportunityId` for its purchase-order line items.
 
 ## If Initial Search Yields No Results
 Do NOT give up after one search attempt. Try:
 1. Different keywords (synonyms, abbreviations, full names)
-2. The other search tool if you only used one
-3. Broader search terms, then narrow down
-4. Different document types (board meetings often discuss technology decisions)
+2. Broader search terms, then narrow down
+3. Different document types (board meetings often discuss technology decisions)
+4. A wider date window, or none, if you applied a date filter
+
+Turn to `runBuyerWebResearch` only under the rule above: when the question genuinely needs external context such as news or press coverage, not as a generic fallback for an empty internal search.
 
 Only respond with "no information found" after exhausting multiple search strategies.
 
@@ -95,7 +97,7 @@ It's fine to default to a recent window when the user asks for "recent" content;
 - Specific quotes, numbers, or detailed specifications
 - When summaries don't provide enough certainty to answer
 
-Remember `viewFileContents` returns truncated excerpts; when you need the complete document (e.g. to read an entire contract end to end), use `getFileDownloadLinks`.
+Remember `viewFileContents` returns truncated excerpts, and they are all you can read. If the answer depends on a part of the document past the excerpt, say so, and give the user the `getFileDownloadLinks` URL so they can open the complete file.
 
 ## Citing files
 - For board-meeting / strategic-plan sources, cite `buyerFiles[].sourceUrl` from `researchBuyerFiles` when present — that is the real citation URL.

@@ -38,7 +38,7 @@ Filter server-side; do not page the whole bridge and filter in memory unless the
 - Rank: `sorts=[{column:<Account Scoring Score id>, direction:DESC}]`.
 - "Hottest" / "right now" / "active": filter **Signal Band** `Any ["Hot","Warm"]`, then sort by Account Scoring Score DESC. Never sort by a band column; enums sort alphabetically.
 - Restrict: `filters.terms` on Buyer Type (`Equals`, or `Any` with an array), Buyer State Name, Fit Band / Signal Band (`Any`), or `buyerId` (`Any` with an array of UUIDs).
-- Page with `pageSize` ≤ 20 until `pageNumber == totalPages`. Each Top Buyers row costs one link lookup per Link column, so keep pages small.
+- Page with `pageSize` ≤ 20, incrementing `pageNumber` while `pageNumber < totalPages`; a page with no items is the end. Each Top Buyers row costs one link lookup per Link column, so keep pages small.
 
 Row shape: `rowId`, `buyerId`, `name` (buyer name), `columns` keyed by column **name**. Every cell is `{ value, status, processedAt }`. The child cells give flat values — `columns["Account Scoring Score"].value`, `columns["Fit Band"].value`, `columns["Signal Band"].value` — so read bands from them. The Account Score cell's `value` is
 
@@ -56,10 +56,10 @@ A `null` Account Score is not zero. It means the row has not been scored yet, or
 
 Link cells on Top Buyers return at most 3 `previewRows` plus a `total`. When the count matters or `total > 3`, read the presence bridge itself:
 
-1. `getBridgeColumnMetadata(presenceBridgeId)` for the ids of **Buyer State Name**, **Buyer Type**, **Vendor**, **Vendor Presence** (boolean "Present"), **Vendor Presence Summary**, **Estimated Annual Contract Value**, **Estimated Total Contract Value** (when present), **Estimated Contract End Date**, **Contract Term**, **Inferred**, **Inference Summary**, **Sources**, and on the competitor bridge **Products**.
+1. `getBridgeColumnMetadata(presenceBridgeId)` for the ids of **Buyer State Name**, **Buyer Type**, **Vendor**, **Vendor Presence** (boolean "Present"), **Vendor Presence Summary**, **Estimated Annual Contract Value**, **Estimated Total Contract Value** (when present), **Estimated Contract End Date**, **Estimated Contract Term**, and on the competitor bridge **Products**.
 2. `listBridgeRows(presenceBridgeId)` with `Vendor Presence Equals true`, plus `Vendor` (`Equals` or `Any`), `Buyer State Name`, `Buyer Type` or `buyerId Any [...]` as the question requires. Presence rows have no Link columns, so `pageSize` 100 is fine here.
 
-Amounts are USD in cents. Contract End Date is an estimate; when `Inferred` is true say so and cite `Inference Summary`. `Sources.value.relevantOpportunities[]` lists the underlying purchase orders and contracts with `title`, `opportunityType`, `startDate` and `endDate`; use those dates for "most recent contract" questions. There is no signing date column.
+Amounts are USD in cents. The contract value, end date and term columns are estimates; say so, citing how **Vendor Presence Summary** derives them. The summary's citations link to `…/opportunity/<opportunityId>`; pass that id to `getOpportunityLineItems` or `viewFileContents` for the underlying record. For "most recent contract" questions use `searchVendorPurchaseOrders` (below). There is no signing date.
 
 Only vendors configured by the organization appear in presence bridges. If a vendor is absent from both, use `searchVendorPurchaseOrders(vendorName=...)`: it returns buyers with `stateCode` and `buyerType` and dated records (`date` = purchase or contract start, `untilDate`), independent of the target market. It has no state filter and is token-bounded (`limit` ≤ 80 records; `truncated=true` drops older buyers); narrow with `productName`, `alias`, `lookbackYears`, `limit`, and disclose when results may be incomplete.
 
@@ -74,4 +74,4 @@ The score and bands live only on Top Buyers; vendor and contract data live only 
 - Buyers outside the target market have no row; report "not in the target market", not "score 0".
 - Aggregations (counts by state, by vendor) are client-side: filter as tightly as possible, read the first page's `totalItems` and warn the user when it is large, then page fully and count. Tell the user the population is the target market only.
 - `listBridgeRows` results can lag recent changes briefly; retry once if a just-scored row is missing.
-- Cite evidence from `fit.longExplanation`, `signals.briefing`, presence `Vendor Presence Summary` / `Sources`, or `listRecentBuyerSignals`; do not infer relationships (e.g. that a partner will introduce the seller) beyond what the data states.
+- Cite evidence from `fit.longExplanation`, `signals.briefing`, presence `Vendor Presence Summary` (keep its citation links), or `listRecentBuyerSignals`; do not infer relationships (e.g. that a partner will introduce the seller) beyond what the data states.

@@ -11,25 +11,28 @@ Retrieves **pre-computed scores and metrics** about a buyer. Use it for quick lo
 
 ## Available Data
 
-### Scores & Ratings (all buyer types)
-- **AI Adoption Score** (1-100) and summary
-- **Startup Friendliness Score** (1-100) and summary
-- **Propensity to Spend Score** and summary
-- **Procurement Difficulty Score** (1-100) and summary
+Attribute keys in parentheses. Not every key applies to every buyer type.
+
+### Scores & Ratings
+- **AI Adoption Score** (1-100) and summary (`AiAdoptionScore`, `AiAdoptionSummary`)
+- **Startup Friendliness Score** (1-100) and summary (`StartupFriendlinessScore`, `StartupFriendlinessSummary`)
+- **Propensity to Spend** score, label, and summary (`PropensityToSpendScore`, `PropensityToSpend`, `PropensityToSpendSummary`)
+- **Procurement Difficulty** — the 1-100 "Procurement Hell Score" (1 = easiest, 100 = hardest) and summary (`ProcurementHellScore`, `AngelProcurementSummary`)
 
 ### Budget & Size
-- Operating budget amount, IT spend, budget URL
-- Population (cities/counties) or enrollment (education)
+- Operating budget amount, year, and URL (`BudgetAmount`, `BudgetLatestYear`, `BudgetUrl`)
+- Subscription-based IT spend noted in the budget (`BudgetSbita`; not for schools)
+- Population for cities/counties (`Population`) or enrollment for education (`TotalEnrollment`, `HigherEdFullTimeEnrollment`)
 
 ### Education Buyers Only
-- SIS (Student Information System) — e.g., PowerSchool, Infinite Campus
-- LMS (Learning Management System) — e.g., Canvas, Blackboard
-- Higher Ed CRMs, scheduling systems
+- SIS (Student Information System) — e.g., PowerSchool, Infinite Campus (`Sis`)
+- LMS (Learning Management System) — e.g., Canvas, Blackboard (`LmsArray`)
+- Higher Ed recruitment / admissions CRMs (`HigherEdRecruitmentAdmissionsCrmArray`)
 
 ## Tool: `getBuyerAttributesBulk`
-Returns one or more structured attributes for a buyer in a single call. Requires the buyer's id (from `buyer-identification`) and one or more `attribute` keys from the `BuyerField` enum; the tool description enumerates every supported key and what it returns — consult that list when picking keys. Prefer this over the single-attribute `getBuyerAttribute` (whose own description recommends the bulk endpoint): one bulk call avoids the token overhead of looping per field. The response maps each requested key to its value (null when the attribute is unset). Omitting `attribute` entirely returns every available attribute — only do that for an explicit full-set need (e.g. CRM enrichment or data analysis), not for an open-ended "what do we know / how should I approach them" question, which is `buyer-summary`'s job.
+Returns many structured attributes for **one** buyer in a single call — the buyer id is a path parameter, so each buyer needs its own call. Requires the buyer's id (from `buyer-identification`) and one or more `attribute` keys from the `BuyerField` enum; pass `attribute` once per key. The accepted keys are the enum values in the tool's input schema. Request every field you need in one call rather than one call per field. The response maps each requested key to its value (null when the attribute is unset). Omitting `attribute` entirely returns every available attribute — only do that for an explicit full-set need (e.g. CRM enrichment or data analysis), not for an open-ended "what do we know / how should I approach them" question, which is `buyer-summary`'s job.
 
 ## Workflow
 1. Ensure the buyer has been identified first (use `buyer-identification`)
-2. Call `getBuyerAttributesBulk` with the `buyerId` and the `attribute` key(s) for the metric(s) the user is asking about — request several at once rather than looping a single-attribute call per field
+2. Call `getBuyerAttributesBulk` with the `buyerId` and the `attribute` key(s) for the metric(s) the user is asking about — request several at once rather than one call per field
 3. If a requested attribute comes back null/empty, that data is not available — fall back to `document-research` to search the underlying documents

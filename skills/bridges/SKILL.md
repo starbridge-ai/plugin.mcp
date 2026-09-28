@@ -29,19 +29,19 @@ Lists the bridge's columns with their per-type settings (link, web-agent, vendor
 
 ### `listBridgeRows`
 The data-bearing call. Each row carries a processing status (`NotProcessed`, `Queued`, `Processing`, `Processed`, `Failed`, `Skipped`), an optional buyer/organizer association, an `updatedAt` timestamp, and a `columns` map **keyed by the human-readable column name** (not columnId), with values polymorphic per the column's `fieldFormat`.
-- Pagination: `pageNumber` is 1-based; `pageSize` has a **maximum of 100** (default 10). Start at `pageNumber=1` and increment until `pageNumber == totalPages`. Do not assume a smaller cap and refuse a large pull.
+- Pagination: `pageNumber` is 1-based; `pageSize` has a **maximum of 100** (default 10). Start at `pageNumber=1` and increment while `pageNumber < totalPages`; a page with no items is the end. Do not assume a smaller cap and refuse a large pull.
 - Prefer narrowing server-side with `filters`, `sorts`, and `query` (in the request body) over scanning every page.
 - Eventual consistency: a just-changed row may not appear in listing/sort/filter immediately — if it's missing where you expect it, retry shortly.
 
 ### `setBridgeRowStatus` (write — confirm first)
-The only mutating tool here. Sets one row's user-facing status (`newStatus`, a fixed enum: `New`, `Actioned`, `Saved`, `Attending`, `Sponsoring`, `Not Interested`). The `rowId` must belong to the given `bridgeId`. **Confirm the exact row and target status with the user before calling**, and read the tool's input schema for the current valid status values rather than hardcoding them.
+The only mutating tool here. Sets one row's user-facing status (`newStatus`, a fixed enum: `New`, `Actioned`, `Saved`, `NotInterested`, plus `Attending` and `Sponsoring` on conference bridges). The UI shows `New` as "Needs action" and `Saved` as "Starred". The `rowId` must belong to the given `bridgeId`. **Confirm the exact row and target status with the user before calling**, and read the tool's input schema for the current valid status values rather than hardcoding them.
 
 ## Workflow
 
 **Inspecting a bridge**
 1. `listBridges` to find the target; if multiple match, confirm with the user.
 2. `getBridge` for metadata, then `getBridgeColumnMetadata` to learn what each column means **before** filtering.
-3. `listBridgeRows` with `filters` / `sorts` / `query` to fetch the rows you need; paginate `pageNumber` 1..`totalPages` with `pageSize` ≤ 100.
+3. `listBridgeRows` with `filters` / `sorts` / `query` to fetch the rows you need; paginate from `pageNumber=1` while `pageNumber < totalPages`, with `pageSize` ≤ 100.
 
 **Analyzing or visualizing a bridge**
 1. Identify the columns via `getBridgeColumnMetadata`.
