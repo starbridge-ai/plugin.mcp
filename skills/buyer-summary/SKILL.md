@@ -34,3 +34,4 @@ It generates on demand when the cached summary is missing or stale, so the first
 - For dated "what's new / recent" questions, prefer `buyer-signals`; use this skill for the synthesized narrative
 - On failure, degrade gracefully: a 404 (`resource.buyer.summary.empty`) means no Bridge tracks this buyer — suggest setting one up rather than silently retrying; for other transient failures, continue with `document-research`
 - Use the summary's sections directly: `whatsRecent`, `theBiggerPicture`, and `areasForDeeperDiscovery`
+- For procurement questions (how do they buy, resellers, coops, "procurement hell"), the summary alone is rarely enough: also pull `buyer-attributes` (procurement-difficulty score) and `document-research` (line items expose resellers and coops)

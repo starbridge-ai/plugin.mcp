@@ -22,7 +22,7 @@ Finds contacts (people) associated with a buyer institution. Searches Starbridge
 ### `searchBuyerContacts`
 Searches the Starbridge-verified contact database. Returns contacts with verified information including name, title, department, email, and phone. Supports three mutually exclusive lookup modes — pass exactly one:
 - `include` (one or more canonical job titles, optionally narrowed with `exclude`). Pass titles as distinct canonical roles — not synonyms or abbreviations of the same role.
-- `name` — a specific person's name (partial names are fine).
+- `name` — a specific person's name (partial names are fine; pass it as the user gave it). Every match comes back, closest first, so when several people share the name, ask the user which one they mean instead of assuming the first.
 - `emails` — one or more known email addresses (up to 512). Addresses match case-insensitively; a malformed address is rejected rather than silently dropped. This is the only mode that returns inactive contacts by design: it matches any contact ever verified for that address at this institution, even if they've since left it, since finding them by email already proves Starbridge validated them in the past. Use this when the user supplies email addresses directly (e.g., checking a list, deduping, or enriching contacts they already sourced elsewhere) rather than asking "who is at X".
 
 When no verified contacts match the request, the response may include `recommendedNextSteps`; surface those snippets to the user instead of deriving role-specific guidance yourself.
@@ -44,7 +44,7 @@ Buyer-scoped public web search. Do not proactively offer this when verified cont
 
 ## Workflow
 1. Ensure the buyer has been identified first via `buyer-identification`
-2. Search using `searchBuyerContacts` — pass `emails` when the user gave you specific addresses to look up, `name` when they named an individual, or one or more canonical job titles in `include` when they're asking by role. Never combine these.
+2. Search using `searchBuyerContacts` — pass `emails` when the user gave you specific addresses to look up, `name` when they named an individual, or one or more canonical job titles in `include` when they're asking by role. Never combine these; if the user gave a name *and* a role, search by `name` and check the titles that come back.
 3. If no verified contacts are returned, do not offer to pull other leadership contacts or search public web sources. Tell the user no verified contacts matched their request, then surface the `recommendedNextSteps` snippets from the `searchBuyerContacts` response as the call to action. Treat `recommendedNextSteps` as authoritative for this empty-search response. If `recommendedNextSteps` is empty or absent, use a conservative fallback:
    > "I didn't find verified contacts that match this request. Contact your Starbridge admin to enrich more verified contacts with Starbridge."
 4. Present contacts using the structured output format below. When any contacts are not enriched (`isEnriched: false`), call `readUserInterfacePreferences` before asking for unlock or enrichment confirmation.
@@ -71,5 +71,5 @@ For an `emails` lookup, `isActive: false` is an expected, common result — not 
 - Never fabricate or guess contact information
 - When verified contact search returns no matches, do not suggest other leadership contacts or public web search unless the user explicitly asks for that next
 - Never enable `autoUnlockOnMCP` unless the user clearly consents to future automatic contact unlocks and understands that unlocks spend credits
-- All contacts returned by `searchBuyerContacts` are Starbridge-verified and reliable, regardless of `isActive`; web contacts may be outdated — always indicate the source. `isActive: false` means no longer current at the institution (expected and common for `emails` lookups), not that the data itself is stale
+- All contacts returned by `searchBuyerContacts` are Starbridge-verified and reliable, regardless of `isActive`; web contacts may be outdated — always indicate the source, and keep a web-sourced contact marked unverified in later turns unless `searchBuyerContacts` later returns the same person. `isActive: false` means no longer current at the institution (expected and common for `emails` lookups), not that the data itself is stale
 - Users can create a contact verification bridge in the application if they need ongoing contact monitoring
