@@ -22,13 +22,14 @@ Matching is by buyer name only (plus the optional `buyerStateCode` filter) — i
 ## Workflow
 1. Extract the buyer/institution name from the user's message
 2. Call `searchBuyers` with `buyerName` (and `buyerStateCode` when stated)
-3. Evaluate the returned candidates and select the best match
-4. Retain the buyer's `id`, `name`, `url`, and `stateCode` for subsequent tool calls
-5. If no candidate is a confident match, do NOT pass a guessed or empty buyer id to downstream tools. Tell the user plainly that no Starbridge buyer matched, echo the name (and state, if any) you searched, and ask which institution they mean — the full name and, if known, which state. When reconciling an external list (e.g. CRM rows), re-run `searchBuyers` with the row's state and corrected name; if there is still no confident match, flag the row as no-match rather than mapping it to a low-confidence buyer.
+3. Evaluate the returned candidates. Use the top result without asking only when its `name` matches what the user said (case-insensitive), or the user's phrasing is unambiguously a short form of it (e.g. "MIT" for "Massachusetts Institute of Technology"). Otherwise ask the user to pick, even when there is only one result: colloquial suffixes like "Schools" vs "School District" have produced wrong-buyer answers.
+4. If the search returns zero results, retry once with a shorter form of the name (drop "Schools", "District", the state, etc.) before asking.
+5. Retain the buyer's `id`, `name`, `url`, and `stateCode` for subsequent tool calls
+6. If no candidate is a confident match, do NOT pass a guessed or empty buyer id to downstream tools. Tell the user plainly that no Starbridge buyer matched, echo the name (and state, if any) you searched, and ask which institution they mean — the full name and, if known, which state. When reconciling an external list (e.g. CRM rows), re-run `searchBuyers` with the row's state and corrected name; if there is still no confident match, flag the row as no-match rather than mapping it to a low-confidence buyer.
 
 Once the buyer id is resolved, continue with the skill that matches the question — `buyer-signals` for recent activity, `buyer-summary` for strategy, `buyer-attributes` for a single metric, `document-research` for evidence, and `contact-search` for people.
 
 If the request implies resolving many buyers at once (a pasted list, "all districts in X", a bridge or CRM export), defer to the `bulk-request-scoping` guardrail to bound scope before running per-buyer lookups.
 
 ## Example Clarification Response
-> "I found multiple institutions matching that name. Could you clarify which one you mean?"
+> "I found <N> institutions that might match. Could you clarify which one you mean? Listing them: …"
