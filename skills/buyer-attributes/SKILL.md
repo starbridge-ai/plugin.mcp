@@ -17,7 +17,7 @@ Attribute keys in parentheses. Not every key applies to every buyer type.
 - **AI Adoption Score** (1-100) and summary (`AiAdoptionScore`, `AiAdoptionSummary`)
 - **Startup Friendliness Score** (1-100) and summary (`StartupFriendlinessScore`, `StartupFriendlinessSummary`)
 - **Propensity to Spend** score, label, and summary (`PropensityToSpendScore`, `PropensityToSpend`, `PropensityToSpendSummary`)
-- **Procurement Difficulty** — the 1-100 "Procurement Hell Score" (1 = easiest, 100 = hardest) and summary (`ProcurementHellScore`, `AngelProcurementSummary`)
+- **Procurement Difficulty** — the 1-100 "Procurement Hell Score" (1 = easiest, 100 = hardest) and summary (`ProcurementHellScore`, `AngelProcurementSummary`); users may ask for it by that name
 
 ### Budget & Size
 - Operating budget amount, year, and URL (`BudgetAmount`, `BudgetLatestYear`, `BudgetUrl`)
@@ -30,9 +30,14 @@ Attribute keys in parentheses. Not every key applies to every buyer type.
 - Higher Ed recruitment / admissions CRMs (`HigherEdRecruitmentAdmissionsCrmArray`)
 
 ## Tool: `getBuyerAttributesBulk`
-Returns many structured attributes for **one** buyer in a single call — the buyer id is a path parameter, so each buyer needs its own call. Requires the buyer's id (from `buyer-identification`) and one or more `attribute` keys from the `BuyerField` enum; pass `attribute` once per key. The accepted keys are the enum values in the tool's input schema. Request every field you need in one call rather than one call per field. The response maps each requested key to its value (null when the attribute is unset). Omitting `attribute` entirely returns every available attribute — only do that for an explicit full-set need (e.g. CRM enrichment or data analysis), not for an open-ended "what do we know / how should I approach them" question, which is `buyer-summary`'s job.
+Returns many structured attributes for **one** buyer in a single call — the buyer id is a path parameter, so each buyer needs its own call. Requires the buyer id (from `buyer-identification`) and zero or more `attribute` keys from the `BuyerField` enum; pass `attribute` once per key. The accepted keys are the enum values in the tool's input schema. Omit `attribute` only when the complete buyer record is genuinely required.
 
 ## Workflow
 1. Ensure the buyer has been identified first (use `buyer-identification`)
-2. Call `getBuyerAttributesBulk` with the `buyerId` and the `attribute` key(s) for the metric(s) the user is asking about — request several at once rather than one call per field
-3. If a requested attribute comes back null/empty, that data is not available — fall back to `document-research` to search the underlying documents
+2. Select only the attribute keys needed to answer the question
+3. Call `getBuyerAttributesBulk` once with the `buyerId` and all selected keys in `attribute`, including when only one key is needed
+4. Read each requested value from the returned `buyerData` map
+5. If a value is null or empty, the data is not available — fall back to `document-research` to search the underlying documents
+
+## Batch attributes in one call
+If the question needs multiple attributes, such as AI adoption, procurement difficulty, budget, and SIS, include all of their keys in one `getBuyerAttributesBulk` call rather than making one call per attribute.

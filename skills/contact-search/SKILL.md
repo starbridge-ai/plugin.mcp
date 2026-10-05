@@ -14,7 +14,7 @@ Finds contacts (people) associated with a buyer institution. Searches Starbridge
 - Finding decision-makers, executives, or specific roles
 - Looking up department heads or board members
 - Any "who is..." or "find me contacts at..." query
-- Confirming or enriching contacts you already have email addresses for
+- Confirming, deduping, or enriching contacts you already have email addresses for
 - As a prerequisite for drafting outbound email
 
 ## Tools
@@ -47,7 +47,7 @@ Buyer-scoped public web search. Do not proactively offer this when verified cont
 2. Search using `searchBuyerContacts` — pass `emails` when the user gave you specific addresses to look up, `name` when they named an individual, or one or more canonical job titles in `include` when they're asking by role. Never combine these; if the user gave a name *and* a role, search by `name` and check the titles that come back.
 3. If no verified contacts are returned, do not offer to pull other leadership contacts or search public web sources. Tell the user no verified contacts matched their request, then surface the `recommendedNextSteps` snippets from the `searchBuyerContacts` response as the call to action. Treat `recommendedNextSteps` as authoritative for this empty-search response. If `recommendedNextSteps` is empty or absent, use a conservative fallback:
    > "I didn't find verified contacts that match this request. Contact your Starbridge admin to enrich more verified contacts with Starbridge."
-4. Present contacts using the structured output format below. When any contacts are not enriched (`isEnriched: false`), call `readUserInterfacePreferences` before asking for unlock or enrichment confirmation.
+4. Present contacts as described in the Presentation section below. When any contacts are not enriched (`isEnriched: false`), call `readUserInterfacePreferences` before asking for unlock or enrichment confirmation.
 5. If the user invokes an unlock action and `autoUnlockOnMCP` is true, call `enrichBuyerContact` for the relevant locked contacts, then re-present the updated contacts. Tell the user that auto-unlock was already enabled and include the credits spent or remaining credit context from the unlock response when available. If the user invokes an unlock action for 20 or more contacts at once, ignore `autoUnlockOnMCP` and ask for explicit consent before calling `enrichBuyerContact`.
 6. If not-enriched contacts (`isEnriched: false`) are present and `autoUnlockOnMCP` is false, frame the unlock or enrichment option as an encouraged action (either action makes the contact usable for CRM sync or sequences; `Unlock` additionally reveals masked details) using the `creditSpendHintsForContactActions` from the `searchBuyerContacts` response. Before stating the cost, briefly indicate which fields are available for each contact to be enriched (e.g. "has email and phone", "has email only") so the user knows what they'll get before spending credits. If `creditSpendHintsForContactActions` is unavailable, still recommend unlocking or enriching the relevant contacts, but do not quote credit balances. In the templates below, `[Action]` is "Unlock" when `actionInContext` is `Unlock` and "Enrich" when it is `Enrichment`; if `actionInContext` is absent, use "Enrich". `[cost]` is `costPerContact`, whatever `canSpendFreely` says:
    - **No personal limit, org has a credit balance** (`hasPersonalLimit: false`, `orgCreditsRemaining` is not null):
@@ -60,12 +60,28 @@ Buyer-scoped public web search. Do not proactively offer this when verified cont
      > "I found verified contacts that look useful for this request but aren't enriched yet. Enriching them makes them available for CRM sync and sequences and, if details are masked, reveals the available email and/or phone fields. Would you like me to enrich them?"
 7. When asking for unlock confirmation, offer to remember the user's choice for future MCP contact unlocks only if it is natural in the conversation. If the user explicitly agrees to remember the choice, call `changeUserInterfacePreferences` with `autoUnlockOnMCP: true` before or alongside unlock. If the user asks to stop automatic unlocks, call `changeUserInterfacePreferences` with `autoUnlockOnMCP: false`.
 8. Once the user confirms they want to unlock, call `enrichBuyerContact` and re-present the updated contacts.
+9. If the user independently requests a web search for contacts, first offer the verified database and explain the difference:
+   > "Starbridge verified contacts are validated through web agents, email bounce checks, a waterfall of enrichment providers, and other signals confirming active employment, title, and contact details. I can search that database for you. Alternatively, I can run a quick web search, but those results are not verified by Starbridge and may be inaccurate. Would you like me to search the verified database first?"
+10. Only call `runBuyerWebResearch` if the user reiterates that they specifically want web-searched contacts after being offered the verified database.
 
 ## Output Format
 The `searchBuyerContacts` response includes `contacts`, `creditSpendHintsForContactActions`, and `recommendedNextSteps`.
 Each contact includes: `id`, `name`, `firstName`, `lastName`, `middleName`, `salutation`, `title`, `email`, `phone`, `relevance`, `isActive`, `isMasked`, `isEnriched`, `organizationAttributes`. Base enrichment decisions on `isEnriched`; `isMasked` says whether the name, email, and phone shown are masked placeholders (e.g. `**********@domain`) rather than real values.
-Present contacts in a clean, readable format — use name, title, and contact details as the primary information. Omit null or empty fields from the display.
 For an `emails` lookup, `isActive: false` is an expected, common result — not a data quality issue. It means Starbridge verified that contact at this institution at some point but they are no longer current; call this out to the user (e.g., "no longer active at this institution") rather than treating it as stale or unreliable data.
+
+## Verified vs. Unverified Contacts
+- **Starbridge-verified contacts**: From `searchBuyerContacts`. Validated through web agents, email bounce checks, a waterfall of enrichment providers, and other signals confirming employment, title, and contact details.
+- **Web contacts**: From `runBuyerWebResearch`. The result of a single web agent search, not verified by Starbridge, and may be inaccurate.
+
+## Presentation
+- Do not start the response with a rationale heading. Lead with a plain sentence that answers the user's request and frames why the selected roles are relevant.
+- If extra rationale is needed, keep it to one short paragraph. Explain relevance using role, seniority, department, buying authority, relationship to the signal, or likely influence on the user's stated goal.
+- Present verified contacts in a clean, readable format — use name, title, and contact details as the primary information. Omit null or empty fields from the display.
+
+### Web Search Results
+- Open with: "These contacts were found via a web search, are not verified by Starbridge, and may be inaccurate."
+- Present web contacts as plain markdown with name, title, and available contact details, separate from verified contacts.
+- Close with: "To get verified contact information, contact your admin to enrich contacts with Starbridge."
 
 ## Important
 - Never fabricate or guess contact information

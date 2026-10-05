@@ -20,6 +20,13 @@ Returns a structured summary grounded in tracked account activity and available 
 
 It generates on demand when the cached summary is missing or stale, so the first call for a buyer can be noticeably slower — set expectations with the user rather than assuming the tool stalled. If `summary` is `null` with `needsRegeneration: true`, a (re)generation is in flight: treat it as "not ready yet," not "no data," and retry shortly. A 404 (`resource.buyer.summary.empty`) means no Bridge in the org is configured to track this buyer, so there is nothing to summarize — tell the user and suggest setting up a Bridge that covers the buyer (they may still have documents and a web footprint, so you can still offer `document-research` or `buyer-attributes`). For other transient failures, fall back to `document-research`.
 
+## Our account context: CRM, owner, last activity
+For "what do we already have on this account", "is it in our CRM", or "who owns it", call `getBuyerAccountContext` with `includeCrmOwner=true` alongside or instead of the summary.
+
+- `connectedCrms` lists each CRM account the buyer is matched to, with the record id, a link, the owner, and the most recent deal. An empty list can be a transient read failure: retry once before saying the buyer is not in the CRM.
+- `lastActivity` is the latest action anyone in the organization took on the buyer; `listBuyerActivity` has the full trail.
+- No tool lists the CRM contacts or every open deal on an account. Say that plainly, give the CRM record link, and offer Starbridge contacts through `contact-search`. Do not report "no contacts" or "no open opportunities" from a field you did not read.
+
 ## Workflow
 1. Ensure the buyer has been identified first via `buyer-identification`
 2. Call `getBuyerSummary` with the buyer id
