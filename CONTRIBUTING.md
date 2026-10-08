@@ -21,7 +21,6 @@ starbridge-mcp-plugin/
 │   ├── plugin.json        # plugin manifest
 │   └── marketplace.json   # makes this repo installable as a marketplace
 ├── .mcp.json              # Starbridge OAuth MCP server (HTTP transport)
-├── skills/                # bundled GTM skills (one SKILL.md per directory)
 ├── README.md              # end-user docs
 └── CONTRIBUTING.md        # this file
 ```
@@ -32,15 +31,7 @@ The plugin points at `https://dashboard.starbridge.ai/mcp/oauth` (HTTP transport
 Code handles dynamic client registration + PKCE automatically. Run `/mcp` after connecting to see
 the live tool list.
 
-## Skills
+## Releasing
 
-Skills are auto-invoked only (`user-invocable: false` in each `SKILL.md`), so they don't appear in
-the `/` menu — Claude activates them based on the request. Each skill's `description` and
-`when_to_use` frontmatter drive that auto-invocation, so keep them sharp and non-overlapping.
-
-When adding or changing a skill:
-
-1. Edit the relevant `skills/<name>/SKILL.md` (one directory per skill).
-2. Bump the `version` in both `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
-   (minor bump for new skills or features, patch for fixes).
-3. Run `claude plugin validate .`.
+Bump the `version` in both `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, then
+run `claude plugin validate .`.
